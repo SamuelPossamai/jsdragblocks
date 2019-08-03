@@ -29,6 +29,12 @@ class Block {
 
     draw(ctx) {
 
+        this.drawBlock(ctx);
+        this.drawConnectors(ctx);
+    }
+
+    drawBlock(ctx) {
+
         ctx.lineWidth = 2;
 
         ctx.fillStyle = "#FFFFFF";
@@ -40,10 +46,19 @@ class Block {
         ctx.fillText(this.name, this.x + this.w/2, this.y + this.h/2)
         ctx.strokeStyle = "#000000";
         ctx.strokeRect(this.x, this.y, this.w, this.h);
+    }
+
+    drawConnectors(ctx) {
 
         ctx.fillStyle = "#0000FF";
-        this._draw_vertical_points(ctx, this.in_qtd, this.x)
-        this._draw_vertical_points(ctx, this.out_qtd, this.x + this.w)
+        this._draw_vertical_points(ctx, this.in_qtd, this.x);
+        this._draw_vertical_points(ctx, this.out_qtd, this.x + this.w);
+    }
+
+    collide(other) {
+
+        return this.x < other.x + other.w && this.x + this.w > other.x &&
+            this.y < other.y + other.h && this.y + this.h > other.y
     }
 
     pointIsInsideBlock(x, y) {
@@ -90,6 +105,7 @@ class BlockConnection {
 
     draw(ctx) {
 
+        const b_out_con_size = this.block_out.connector_size;
         const arrow_width = 10;
         const arrow_x_offset = 5;
         const arrow_height = 7;
@@ -104,6 +120,11 @@ class BlockConnection {
         else {
 
             end = this.moving_pos;
+
+            if(CanvasBlockViewer._test_if_inside(end[0], end[1], start[0], start[1], 3*b_out_con_size)) {
+
+                return;
+            }
         }
 
         ctx.strokeStyle = "#0000FF";
@@ -112,7 +133,7 @@ class BlockConnection {
         ctx.beginPath();
         ctx.moveTo(start[0], start[1]);
 
-        if(start[0] + 40 < end[0]) {
+        if(start[0] + 40 < end[0] || (end[0] > start[0] && end[0] - start[0] < 41 && Math.abs(end[1] - start[1]) < 20)) {
 
             const middle_x = start[0] + (end[0] - start[0])/2;
 
@@ -123,15 +144,42 @@ class BlockConnection {
 
             const middle_y = start[1] + (end[1] - start[1])/2;
 
-            ctx.lineTo(start[0] + 20, start[1]);
-            ctx.lineTo(start[0] + 20, middle_y);
-            ctx.lineTo(end[0] - 20, middle_y);
+            let y_turn = null;
+
+            const diff_center_y = middle_y - this.block_out.y - this.block_out.h/2;
+            if(Math.abs(diff_center_y) > this.block_out.h) {
+                y_turn = middle_y;
+            }
+            else {
+                if(diff_center_y > 0) {
+                    y_turn = this.block_out.y + 3*this.block_out.h/2;
+                    const in_y_turn = this.block_in.y + 3*this.block_in.h/2;
+                    if(in_y_turn > y_turn) {
+                        y_turn = in_y_turn;
+                    }
+                }
+                else {
+                    y_turn = this.block_out.y - this.block_out.h/2
+                    const in_y_turn = this.block_in.y - this.block_in.h/2;
+                    if(in_y_turn < y_turn) {
+                        y_turn = in_y_turn;
+                    }
+                }
+            }
+
+            let x_start = start[0] + 20;
+            if(this.block_in.x + this.block_in.w > start[0]) {
+                x_start = this.block_in.x + this.block_in.w + 20;
+            }
+
+            ctx.lineTo(x_start, start[1]);
+            ctx.lineTo(x_start, y_turn);
+            ctx.lineTo(end[0] - 20, y_turn);
             ctx.lineTo(end[0] - 20, end[1]);
         }
 
         ctx.lineTo(end[0] - arrow_x_offset - 2, end[1]);
         ctx.stroke();
-
 
         ctx.beginPath();
         ctx.moveTo(end[0] - arrow_width - arrow_x_offset, end[1] - arrow_height);
@@ -193,13 +241,17 @@ class CanvasBlockViewer {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         for(let [_, block] of this._blocks) {
-            block.draw(ctx);
+            block.drawBlock(ctx);
         }
 
         for(let connection of this._connections) {
-
             connection.draw(ctx);
         }
+
+        for(let [_, block] of this._blocks) {
+            block.drawConnectors(ctx);
+        }
+
     }
 
     static _test_if_inside(x, y, cx, cy, half_side) {
@@ -235,8 +287,6 @@ class CanvasBlockViewer {
 
                 if(CanvasBlockViewer._test_if_inside(x, y, out_pos[0], out_pos[1], out_size)) {
 
-                    document.getElementById(cbv._canvas_id).style.cursor = "copy";
-
                     let connection = new BlockConnection(block, i, null, 0);
                     cbv._connections.push(connection);
                     cbv._connection_clicked = connection;
@@ -255,7 +305,6 @@ class CanvasBlockViewer {
         if(block_clicked !== null) {
 
             cbv._block_clicked = block_clicked;
-            document.getElementById(cbv._canvas_id).style.cursor = "copy";
 
             cbv._clicked_x_off = x - block_clicked.x;
             cbv._clicked_y_off = y - block_clicked.y;
@@ -310,11 +359,22 @@ class CanvasBlockViewer {
 
     static _canvas_mousemove_event(cbv, event) {
 
+        document.getElementById(cbv._canvas_id).style.cursor = "auto";
+
         const rect = event.target.getBoundingClientRect();
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
 
         if(cbv._block_clicked !== null) {
+
+            for(let [block_name, block] of cbv._blocks) {
+
+                if(cbv._block_clicked !== block && cbv._block_clicked.collide(block)) {
+
+                    document.getElementById(cbv._canvas_id).style.cursor = "no-drop";
+                    break;
+                }
+            }
 
             cbv._block_clicked.x = x - cbv._clicked_x_off;
             cbv._block_clicked.y = y - cbv._clicked_y_off;
@@ -326,6 +386,17 @@ class CanvasBlockViewer {
             cbv._connection_clicked.moving_pos = [x, y];
 
             cbv.redraw();
+        }
+        else {
+
+            let block_clicked = null;
+            for(let [_, block] of cbv._blocks) {
+                if(block.pointIsInsideBlock(x, y) === true) {
+
+                    document.getElementById(cbv._canvas_id).style.cursor = "move";
+                    return;
+                }
+            }
         }
     }
 }
