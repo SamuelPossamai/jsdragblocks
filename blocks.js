@@ -158,16 +158,20 @@ class BlockConnection {
             else {
                 if(diff_center_y > 0) {
                     y_turn = this.block_out.y + 3*this.block_out.h/2;
-                    const in_y_turn = this.block_in.y + 3*this.block_in.h/2;
-                    if(this.moving_pos === null && in_y_turn > y_turn) {
-                        y_turn = in_y_turn;
+                    if(this.moving_pos === null) {
+                        const in_y_turn = this.block_in.y + 3*this.block_in.h/2;
+                        if(in_y_turn > y_turn) {
+                            y_turn = in_y_turn;
+                        }
                     }
                 }
                 else {
                     y_turn = this.block_out.y - this.block_out.h/2
-                    const in_y_turn = this.block_in.y - this.block_in.h/2;
-                    if(this.moving_pos === null && in_y_turn < y_turn) {
-                        y_turn = in_y_turn;
+                    if(this.moving_pos === null) {
+                        const in_y_turn = this.block_in.y - this.block_in.h/2;
+                        if(in_y_turn < y_turn) {
+                            y_turn = in_y_turn;
+                        }
                     }
                 }
             }
@@ -210,6 +214,9 @@ class CanvasBlockViewer {
         this._connection_clicked = null;
         this._clicked_x_off = 0;
         this._clicked_y_off = 0;
+        this._before_click_block_x = 0;
+        this._before_click_block_y = 0;
+        this._block_invalid_position = false;
         this._moved_after_press = false;
         this._selected_block = null;
 
@@ -267,6 +274,26 @@ class CanvasBlockViewer {
         return x > cx - half_side && x < cx + half_side && y > cy - half_side && y < cy + half_side
     }
 
+    _find_block_inout_next_to_point(x, y, is_input) {
+
+        for(let [block_name, block] of this._blocks) {
+
+            const qtd = is_input ? block.in_qtd : block.out_qtd;
+
+            for(let i = 0; i < qtd; i++) {
+
+                const p_pos = is_input ? block.inputPoint(i) : block.outputPoint(i);
+                const c_size = block.connector_size;
+
+                if(CanvasBlockViewer._test_if_inside(x, y, p_pos[0], p_pos[1], c_size)) {
+                    return [block, i];
+                }
+            }
+        }
+
+        return null;
+    }
+
     static _canvas_mousedown_event(cbv, event) {
 
         cbv._moved_after_press = false;
@@ -288,21 +315,14 @@ class CanvasBlockViewer {
             }
         }
 
-        for(let [block_name, block] of cbv._blocks) {
+        let block_found = cbv._find_block_inout_next_to_point(x, y, false);
 
-            for(let i = 0; i < block.out_qtd; i++) {
+        if(block_found != null) {
 
-                const out_pos = block.outputPoint(i);
-                const out_size = block.connector_size;
-
-                if(CanvasBlockViewer._test_if_inside(x, y, out_pos[0], out_pos[1], out_size)) {
-
-                    let connection = new BlockConnection(block, i, null, 0);
-                    cbv._connections.push(connection);
-                    cbv._connection_clicked = connection;
-                    return;
-                }
-            }
+            let connection = new BlockConnection(block_found[0], block_found[1], null, 0);
+            cbv._connections.push(connection);
+            cbv._connection_clicked = connection;
+            return;
         }
 
         let block_clicked = null;
@@ -318,6 +338,9 @@ class CanvasBlockViewer {
 
             cbv._clicked_x_off = x - block_clicked.x;
             cbv._clicked_y_off = y - block_clicked.y;
+
+            cbv._before_click_block_x = block_clicked.x;
+            cbv._before_click_block_y = block_clicked.y;
         }
         else {
 
@@ -339,25 +362,14 @@ class CanvasBlockViewer {
             const connection = cbv._connection_clicked;
             const current_position = connection.moving_pos;
 
-            let input_found = false;
-            for(let [block_name, block] of cbv._blocks) {
+            let block_found = cbv._find_block_inout_next_to_point(current_position[0], current_position[1], true);
 
-                for(let i = 0; i < block.in_qtd; i++) {
+            if(block_found != null) {
 
-                    const in_pos = block.inputPoint(i);
-                    const in_size = block.connector_size;
-
-                    if(CanvasBlockViewer._test_if_inside(current_position[0], current_position[1], in_pos[0], in_pos[1], in_size)) {
-
-                        connection.block_in = block;
-                        connection.n_in = i;
-                        input_found = true;
-                        break;
-                    }
-                }
+                connection.block_in = block_found[0];
+                connection.n_in = block_found[1];
             }
-
-            if(input_found === false) {
+            else {
 
                 const out_pos = connection.block_out.outputPoint(connection.n_out);
                 const out_size = connection.block_out.connector_size;
@@ -384,6 +396,13 @@ class CanvasBlockViewer {
 
             cbv.redraw();
         }
+        else if(cbv._block_clicked !== null && this._block_invalid_position === true) {
+
+            cbv._block_clicked.x = cbv._before_click_block_x;
+            cbv._block_clicked.y = cbv._before_click_block_y;
+
+            cbv.redraw();
+        }
 
         document.getElementById(cbv._canvas_id).style.cursor = "auto";
         cbv._block_clicked = null;
@@ -400,11 +419,13 @@ class CanvasBlockViewer {
 
         if(cbv._block_clicked !== null) {
 
+            this._block_invalid_position = false;
             for(let [block_name, block] of cbv._blocks) {
 
                 if(cbv._block_clicked !== block && cbv._block_clicked.collide(block)) {
 
                     document.getElementById(cbv._canvas_id).style.cursor = "no-drop";
+                    this._block_invalid_position = true;
                     break;
                 }
             }
@@ -441,19 +462,12 @@ class CanvasBlockViewer {
                 }
             }
 
-            for(let [block_name, block] of cbv._blocks) {
+            let block_found = cbv._find_block_inout_next_to_point(x, y, false);
 
-                for(let i = 0; i < block.out_qtd; i++) {
+            if(block_found != null) {
 
-                    const out_pos = block.outputPoint(i);
-                    const out_size = block.connector_size;
-
-                    if(CanvasBlockViewer._test_if_inside(x, y, out_pos[0], out_pos[1], out_size)) {
-
-                        document.getElementById(cbv._canvas_id).style.cursor = "move";
-                        return;
-                    }
-                }
+                document.getElementById(cbv._canvas_id).style.cursor = "move";
+                return;
             }
         }
     }
