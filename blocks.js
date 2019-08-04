@@ -138,7 +138,8 @@ class BlockConnection {
         ctx.beginPath();
         ctx.moveTo(start[0], start[1]);
 
-        if(start[0] + 40 < end[0] || (end[0] > start[0] && end[0] - start[0] < 41 && Math.abs(end[1] - start[1]) < 20)) {
+        if(start[0] + 40 < end[0] || (end[0] > start[0] && end[0] - start[0] <= 40 && (this.block_in === null || (
+            this.block_out.y < this.block_in.y + this.block_in.h && this.block_out.y + this.block_out.h > this.block_in.y)))) {
 
             const middle_x = start[0] + (end[0] - start[0])/2;
 
@@ -177,7 +178,7 @@ class BlockConnection {
             }
 
             let x_start = start[0] + 20;
-            if(this.moving_pos === null && this.block_in.x + this.block_in.w > start[0]) {
+            if(this.moving_pos === null && y_turn != middle_y && this.block_in.x + this.block_in.w > start[0]) {
                 x_start = this.block_in.x + this.block_in.w + 20;
             }
 
