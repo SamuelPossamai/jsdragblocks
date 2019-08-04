@@ -1,0 +1,43 @@
+<!DOCTYPE html5>
+<html>
+<head>
+    <meta charset="UTF-8">
+
+    <script src="../blocks.js"></script>
+
+</head>
+<body>
+
+    <p align="center">
+        <canvas id="canvas" width="800" height="400" style="margin-top: 100px; border:1px solid #000000;"></canvas>
+    </p>
+    <p id="write_to" style="text-align: center; margin-top: 20px;">None</p>
+
+    <script>
+        "use strict";
+
+        var block_viewer = new CanvasBlockViewer('canvas');
+
+        block_viewer.select_callback = function(block) {
+
+            console.log(block);
+            if(block == null) {
+
+                document.getElementById("write_to").innerHTML = "None";
+            }
+            else {
+
+                document.getElementById("write_to").innerHTML = block.name;
+            }
+        }
+
+        let block1 = new Block('name1', 100, 200, 70, 70, 0, 1);
+
+        block1.font = "16px Georgia";
+        block_viewer.addBlock(block1);
+        block_viewer.addBlock(new Block('name2', 400, 300, 140, 65, 3, 2));
+        block_viewer.addBlock(new Block('name3', 600, 300, 140, 65, 2, 0));
+
+    </script>
+</body>
+</html>

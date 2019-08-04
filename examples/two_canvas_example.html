@@ -1,0 +1,29 @@
+<!DOCTYPE html5>
+<html>
+<head>
+    <meta charset="UTF-8">
+
+    <script src="../blocks.js"></script>
+
+</head>
+<body>
+
+    <canvas id="canvas1" width="600" height="400" style="margin-left: 50px; margin-top: 100px; border:1px solid #000000;"></canvas>
+    <canvas id="canvas2" width="600" height="400" style="border:1px solid #000000;"></canvas>
+
+    <script>
+        "use strict";
+
+        var c1_block_viewer = new CanvasBlockViewer('canvas1');
+        var c2_block_viewer = new CanvasBlockViewer('canvas2');
+
+        c1_block_viewer.addBlock(new Block('name1', 100, 200, 140, 65, 1, 2));
+        c1_block_viewer.addBlock(new Block('name2', 400, 300, 140, 65, 3, 2));
+
+        c2_block_viewer.addBlock(new Block('name3', 100, 200, 140, 65, 1, 2));
+        c2_block_viewer.addBlock(new Block('name4', 400, 300, 140, 65, 3, 2));
+        c2_block_viewer.addBlock(new Block('name5', 500, 100, 80, 40, 0, 1));
+
+    </script>
+</body>
+</html>

@@ -27,13 +27,13 @@ class Block {
         this.connector_size = this.h/10;
     }
 
-    draw(ctx) {
+    draw(ctx, selected) {
 
         this.drawBlock(ctx);
         this.drawConnectors(ctx);
     }
 
-    drawBlock(ctx) {
+    drawBlock(ctx, selected) {
 
         ctx.lineWidth = 2;
 
@@ -44,7 +44,12 @@ class Block {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(this.name, this.x + this.w/2, this.y + this.h/2)
-        ctx.strokeStyle = "#000000";
+        if(selected) {
+            ctx.strokeStyle = "#FF0000";
+        }
+        else {
+            ctx.strokeStyle = "#000000";
+        }
         ctx.strokeRect(this.x, this.y, this.w, this.h);
     }
 
@@ -154,21 +159,21 @@ class BlockConnection {
                 if(diff_center_y > 0) {
                     y_turn = this.block_out.y + 3*this.block_out.h/2;
                     const in_y_turn = this.block_in.y + 3*this.block_in.h/2;
-                    if(in_y_turn > y_turn) {
+                    if(this.moving_pos === null && in_y_turn > y_turn) {
                         y_turn = in_y_turn;
                     }
                 }
                 else {
                     y_turn = this.block_out.y - this.block_out.h/2
                     const in_y_turn = this.block_in.y - this.block_in.h/2;
-                    if(in_y_turn < y_turn) {
+                    if(this.moving_pos === null && in_y_turn < y_turn) {
                         y_turn = in_y_turn;
                     }
                 }
             }
 
             let x_start = start[0] + 20;
-            if(this.block_in.x + this.block_in.w > start[0]) {
+            if(this.moving_pos === null && this.block_in.x + this.block_in.w > start[0]) {
                 x_start = this.block_in.x + this.block_in.w + 20;
             }
 
@@ -197,6 +202,7 @@ class CanvasBlockViewer {
 
         let cbv = this;
 
+        this.select_callback = null;
         this._blocks = new Map();
         this._connections = [];
         this._canvas_id = canvas_id;
@@ -204,6 +210,8 @@ class CanvasBlockViewer {
         this._connection_clicked = null;
         this._clicked_x_off = 0;
         this._clicked_y_off = 0;
+        this._moved_after_press = false;
+        this._selected_block = null;
 
         let canvas = document.getElementById(this._canvas_id);
 
@@ -241,7 +249,7 @@ class CanvasBlockViewer {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         for(let [_, block] of this._blocks) {
-            block.drawBlock(ctx);
+            block.drawBlock(ctx, this._selected_block === block);
         }
 
         for(let connection of this._connections) {
@@ -260,6 +268,8 @@ class CanvasBlockViewer {
     }
 
     static _canvas_mousedown_event(cbv, event) {
+
+        cbv._moved_after_press = false;
 
         const rect = event.target.getBoundingClientRect();
         const x = event.clientX - rect.left;
@@ -309,11 +319,20 @@ class CanvasBlockViewer {
             cbv._clicked_x_off = x - block_clicked.x;
             cbv._clicked_y_off = y - block_clicked.y;
         }
+        else {
+
+            if(cbv._selected_block !== null) {
+                cbv._selected_block = null;
+                if(cbv.select_callback != null) {
+
+                    cbv.select_callback(null);
+                }
+                cbv.redraw();
+            }
+        }
     }
 
     static _canvas_mouseup_event(cbv, event) {
-
-        cbv._block_clicked = null;
 
         if(cbv._connection_clicked !== null) {
 
@@ -354,11 +373,25 @@ class CanvasBlockViewer {
 
             cbv.redraw();
         }
+        else if(cbv._block_clicked !== null && cbv._moved_after_press === false) {
+
+            cbv._selected_block = cbv._block_clicked;
+
+            if(cbv.select_callback != null) {
+
+                cbv.select_callback(cbv._selected_block);
+            }
+
+            cbv.redraw();
+        }
+
         document.getElementById(cbv._canvas_id).style.cursor = "auto";
+        cbv._block_clicked = null;
     }
 
     static _canvas_mousemove_event(cbv, event) {
 
+        cbv._moved_after_press = true;
         document.getElementById(cbv._canvas_id).style.cursor = "auto";
 
         const rect = event.target.getBoundingClientRect();
@@ -389,12 +422,37 @@ class CanvasBlockViewer {
         }
         else {
 
-            let block_clicked = null;
+            let can_move = false;
             for(let [_, block] of cbv._blocks) {
                 if(block.pointIsInsideBlock(x, y) === true) {
+                    document.getElementById(cbv._canvas_id).style.cursor = "move";
+                    return;
+                }
+            }
+
+            for(let connection of cbv._connections) {
+
+                const end_point = connection.block_in.inputPoint(connection.n_in);
+
+                if(CanvasBlockViewer._test_if_inside(x, y, end_point[0], end_point[1], connection.block_in.connector_size)) {
 
                     document.getElementById(cbv._canvas_id).style.cursor = "move";
                     return;
+                }
+            }
+
+            for(let [block_name, block] of cbv._blocks) {
+
+                for(let i = 0; i < block.out_qtd; i++) {
+
+                    const out_pos = block.outputPoint(i);
+                    const out_size = block.connector_size;
+
+                    if(CanvasBlockViewer._test_if_inside(x, y, out_pos[0], out_pos[1], out_size)) {
+
+                        document.getElementById(cbv._canvas_id).style.cursor = "move";
+                        return;
+                    }
                 }
             }
         }
