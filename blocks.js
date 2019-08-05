@@ -4,33 +4,22 @@ class Block {
 
     constructor(name, x, y, w, h, in_qtd, out_qtd) {
 
-        if(in_qtd == null) {
-            this.in_qtd = 0;
-        }
-        else {
-            this.in_qtd = in_qtd;
-        }
-
-        if(out_qtd == null) {
-            this.out_qtd = 0;
-        }
-        else {
-            this.out_qtd = out_qtd;
-        }
+        this.in_qtd = in_qtd == null ? 0 : in_qtd;
+        this.out_qtd = out_qtd == null ? 0 : out_qtd;
 
         this.x = x;
         this.y = y;
         this.w = w;
         this.h = h;
         this.name = name;
-        this.font = "20px Georgia"
+        this.font = `${Math.trunc((w + h)/10)}px Georgia`;
         this.connector_size = this.h/10;
     }
 
     draw(ctx, selected) {
 
-        this.drawBlock(ctx);
-        this.drawConnectors(ctx);
+        this.drawBlock(ctx, selected);
+        this.drawConnectors(ctx, selected);
     }
 
     drawBlock(ctx, selected) {
@@ -53,9 +42,9 @@ class Block {
         ctx.strokeRect(this.x, this.y, this.w, this.h);
     }
 
-    drawConnectors(ctx) {
+    drawConnectors(ctx, _selected, color) {
 
-        ctx.fillStyle = "#0000FF";
+        ctx.fillStyle = color == null ? "#0000FF" : color;
         this._draw_vertical_points(ctx, this.in_qtd, this.x);
         this._draw_vertical_points(ctx, this.out_qtd, this.x + this.w);
     }
@@ -98,7 +87,7 @@ class Block {
 
 class BlockConnection {
 
-    constructor(block_out, n_out, block_in, n_in) {
+    constructor(block_out, n_out, block_in, n_in, cbv) {
 
         this.block_out = block_out;
         this.n_out = n_out;
@@ -106,6 +95,8 @@ class BlockConnection {
         this.n_in = n_in;
 
         this.moving_pos = null;
+
+        this._cbv = cbv;
     }
 
     draw(ctx) {
@@ -132,7 +123,7 @@ class BlockConnection {
             }
         }
 
-        ctx.strokeStyle = "#0000FF";
+        ctx.strokeStyle = this._get_color();
         ctx.lineWidth = 3;
 
         ctx.beginPath();
@@ -196,8 +187,51 @@ class BlockConnection {
         ctx.lineTo(end[0] - arrow_x_offset, end[1]);
         ctx.lineTo(end[0] - arrow_width - arrow_x_offset, end[1] + arrow_height);
         ctx.closePath();
-        ctx.fillStyle = "#0000FF";
+        ctx.fillStyle = this._get_color();
         ctx.fill();
+    }
+
+    _get_color() {
+
+        const out_get_color_func = this.block_out.connectionColor;
+
+        let connection_color = null;
+        let connection_color_priority = null;
+
+        if(out_get_color_func != null) {
+            let out_result = this.block_out.connectionColor(true, this.n_out);
+
+            if(out_result instanceof Array) {
+                connection_color = out_result[0];
+                connection_color_priority = out_result[1];
+            }
+            else {
+
+                connection_color = out_result;
+            }
+        }
+
+        if(this.block_in != null) {
+            const in_get_color_func = this.block_in.connectionColor;
+
+            if(in_get_color_func != null) {
+
+                let in_result = this.block_in.connectionColor(false, this.n_in);
+                if(in_result instanceof Array) {
+
+                    if(connection_color_priority === null || in_result[1] <= connection_color_priority) {
+                        connection_color = in_result[0];
+                        connection_color_priority = in_result[1];
+                    }
+                }
+                else if(connection_color_priority === null) {
+
+                    connection_color = in_result;
+                }
+            }
+        }
+
+        return connection_color !== null ? connection_color : this._cbv.connection_color;
     }
 }
 
@@ -208,6 +242,8 @@ class CanvasBlockViewer {
         let cbv = this;
 
         this.select_callback = null;
+        this.connection_color = "#0000FF";
+
         this._blocks = new Map();
         this._connections = [];
         this._canvas_id = canvas_id;
@@ -242,7 +278,7 @@ class CanvasBlockViewer {
         const b_in = this._blocks.get(block_in);
         const b_out = this._blocks.get(block_out);
 
-        this._connections.push(new BlockConnection(b_in, n_in, b_out, n_out))
+        this._connections.push(new BlockConnection(b_in, n_in, b_out, n_out, this))
 
         if(need_redraw !== false) {
             this.redraw();
@@ -265,7 +301,7 @@ class CanvasBlockViewer {
         }
 
         for(let [_, block] of this._blocks) {
-            block.drawConnectors(ctx);
+            block.drawConnectors(ctx, this._selected_block === block);
         }
 
     }
@@ -320,7 +356,7 @@ class CanvasBlockViewer {
 
         if(block_found != null) {
 
-            let connection = new BlockConnection(block_found[0], block_found[1], null, 0);
+            let connection = new BlockConnection(block_found[0], block_found[1], null, 0, cbv);
             cbv._connections.push(connection);
             cbv._connection_clicked = connection;
             return;
