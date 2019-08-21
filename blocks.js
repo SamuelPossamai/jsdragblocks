@@ -83,6 +83,25 @@ class Block {
             ctx.fill();
         }
     }
+
+    saveJSON(stringify) {
+
+        let obj = {
+
+            'x': this.x,
+            'y': this.y,
+            'width': this.w,
+            'height': this.h,
+            'name': this.name
+        }
+
+        if(stringify !== false) {
+
+            return JSON.stringify(obj);
+        }
+
+        return obj;
+    }
 }
 
 class BlockConnection {
@@ -262,6 +281,57 @@ class CanvasBlockViewer {
         canvas.addEventListener('mousedown', function(event) { CanvasBlockViewer._canvas_mousedown_event(cbv, event); }, false);
         canvas.addEventListener('mouseup', function(event) { CanvasBlockViewer._canvas_mouseup_event(cbv, event); }, false);
         canvas.addEventListener('mousemove', function(event) { CanvasBlockViewer._canvas_mousemove_event(cbv, event); }, false);
+    }
+
+    _saveJSON_connection_push(connection, block_info, type, other_block_id) {
+
+        if(block_info[type] == null) {
+
+            block_info[type] = [];
+        }
+
+        block_info[type].push({
+
+            'input_number': connection.n_in,
+            'output_number': connection.n_out,
+            'block': other_block_id
+        })
+    }
+
+    saveJSON(stringify) {
+
+        let output = [];
+        let block_to_id = new Map();
+
+        let i = 0;
+
+        for(let [_, block] of this._blocks) {
+
+            output.push(block.saveJSON(false));
+
+            block_to_id.set(block, i);
+
+            i++;
+        }
+
+        for(let connection of this._connections) {
+
+            if(connection.block_in != null && connection.block_out != null) {
+
+                let in_block_id = block_to_id.get(connection.block_in);
+                let out_block_id = block_to_id.get(connection.block_out);
+
+                this._saveJSON_connection_push(connection, output[in_block_id], 'input', out_block_id);
+                this._saveJSON_connection_push(connection, output[out_block_id], 'output', in_block_id);
+            }
+        }
+
+        if(stringify !== false) {
+
+            return JSON.stringify(output);
+        }
+
+        return output;
     }
 
     addBlock(block, need_redraw) {
