@@ -336,11 +336,31 @@ class CanvasBlockViewer {
 
     addBlock(block, need_redraw) {
 
+        if(this._blocks.get(block.name) != null) return false;
+
         this._blocks.set(block.name, block);
 
         if(need_redraw !== false) {
             this.redraw();
         }
+
+        return true;
+    }
+
+    remBlock(block, need_redraw) {
+
+        const deleted = this._blocks.delete(block.name);
+
+        if(need_redraw !== false) {
+            this.redraw();
+        }
+
+        return deleted;
+    }
+
+    findBlock(block_name) {
+
+        return this._blocks.get(block_name);
     }
 
     addConnection(block_in, n_in, block_out, n_out, need_redraw) {
