@@ -92,7 +92,9 @@ class Block {
             'y': this.y,
             'width': this.w,
             'height': this.h,
-            'name': this.name
+            'name': this.name,
+            'inputs': this.in_qtd,
+            'outputs': this.out_qtd
         }
 
         if(stringify !== false) {
@@ -332,6 +334,72 @@ class CanvasBlockViewer {
         }
 
         return output;
+    }
+
+    loadJSONCreateBlockDefault(block_json) {
+
+        return new Block(block_json.name, block_json.x, block_json.y, block_json.width,
+                         block_json.height, block_json.inputs, block_json.outputs);
+    }
+
+    loadJSON(blocks_json_info, parse_string, args) {
+
+        if(parse_string !== false) {
+            blocks_json_info = JSON.parse(parse_string);
+        }
+
+        let create_block = null;
+
+        if(args != null && args.create_block != null) {
+
+            create_block = args.create_block;
+        }
+        else create_block = this.loadJSONCreateBlockDefault;
+
+        if(args != null && args.clear_before === true) {
+
+            this._blocks.clear();
+            this._connections.length = 0;
+            this._block_clicked = null;
+            this._connection_clicked = null;
+            this._block_invalid_position = false;
+            this._moved_after_press = false;
+            this._selected_block = null;
+        }
+
+        const pos_to_block = new Map();
+
+        for(let i = 0; i < blocks_json_info.length; i++) {
+
+            const block_json = blocks_json_info[i];
+
+            let block = create_block(block_json);
+            this.addBlock(block, false);
+
+            pos_to_block.set(i, block);
+        }
+
+        for(let i = 0; i < blocks_json_info.length; i++) {
+
+            const block_json = blocks_json_info[i];
+
+            const block = pos_to_block.get(i);
+
+            if(block_json.output == null) continue;
+
+            for(let output_info of block_json.output) {
+
+                const out_block = pos_to_block.get(output_info.block);
+
+                console.log(block, output_info.input_number, out_block, output_info.output_number);
+
+                this.addConnection(block.name, output_info.output_number,
+                                   out_block.name, output_info.input_number);
+
+            }
+        }
+
+        this.redraw();
     }
 
     addBlock(block, need_redraw) {
