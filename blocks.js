@@ -417,13 +417,18 @@ class CanvasBlockViewer {
 
     remBlock(block, need_redraw) {
 
-        const deleted = this._blocks.delete(block.name);
+        if(!this._blocks.delete(block.name)) return false;
+
+        this._connections = this._connections.filter((value) => {
+
+            return value.block_in != block && value.block_out != block;
+        })
 
         if(need_redraw !== false) {
             this.redraw();
         }
 
-        return deleted;
+        return true;
     }
 
     findBlock(block_name) {
