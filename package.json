@@ -1,6 +1,6 @@
 {
   "name": "jsdragblocks",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Simple javascript library to show and edit connected blocks.",
   "main": "src/blocks.js",
   "directories": {

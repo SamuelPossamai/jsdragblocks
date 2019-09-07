@@ -345,7 +345,7 @@ class CanvasBlockViewer {
     loadJSON(blocks_json_info, parse_string, args) {
 
         if(parse_string !== false) {
-            blocks_json_info = JSON.parse(parse_string);
+            blocks_json_info = JSON.parse(blocks_json_info);
         }
 
         let create_block = null;
@@ -391,11 +391,8 @@ class CanvasBlockViewer {
 
                 const out_block = pos_to_block.get(output_info.block);
 
-                console.log(block, output_info.input_number, out_block, output_info.output_number);
-
                 this.addConnection(block.name, output_info.output_number,
                                    out_block.name, output_info.input_number);
-
             }
         }
 
