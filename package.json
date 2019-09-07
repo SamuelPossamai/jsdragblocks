@@ -1,0 +1,22 @@
+{
+  "name": "jsdragblocks",
+  "version": "0.1.0",
+  "description": "Simple javascript library to show and edit connected blocks.",
+  "main": "src/blocks.js",
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamuelPossamai/jsdragblocks.git"
+  },
+  "author": "SamuelPossamai",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/SamuelPossamai/jsdragblocks/issues"
+  },
+  "homepage": "https://github.com/SamuelPossamai/jsdragblocks#readme"
+}
