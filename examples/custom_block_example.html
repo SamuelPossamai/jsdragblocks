@@ -82,8 +82,15 @@
             return null;
         }
 
+        let block_name2 = new Block('name2', 630, 300, 140, 65, 3, 1);
+
+        block_name2.bg_color = '#0F0';
+        block_name2.fg_color = '#FF0';
+        block_name2.border_color = '#00F';
+        block_name2.sel_border_color = '#AAA';
+
         block_viewer.addBlock(new CustomBlock('name1', 280, 180, 50, 2));
-        block_viewer.addBlock(new Block('name2', 630, 300, 140, 65, 3, 1));
+        block_viewer.addBlock(block_name2);
         block_viewer.addBlock(new Block('name3', 421, 380, 140, 65, 3, 2));
         block_viewer.addBlock(custom_connection_color_block);
 

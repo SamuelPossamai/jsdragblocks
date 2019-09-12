@@ -26,18 +26,18 @@ class Block {
 
         ctx.lineWidth = 2;
 
-        ctx.fillStyle = "#FFFFFF";
+        ctx.fillStyle = this.bg_color || "#FFFFFF";
         ctx.fillRect(this.x, this.y, this.w, this.h);
-        ctx.fillStyle = "#000000";
+        ctx.fillStyle = this.fg_color || "#000000";
         ctx.font = this.font;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(this.name, this.x + this.w/2, this.y + this.h/2)
         if(selected) {
-            ctx.strokeStyle = "#FF0000";
+            ctx.strokeStyle = this.sel_border_color || "#FF0000";
         }
         else {
-            ctx.strokeStyle = "#000000";
+            ctx.strokeStyle = this.border_color || "#000000";
         }
         ctx.strokeRect(this.x, this.y, this.w, this.h);
     }
