@@ -277,6 +277,8 @@ class CanvasBlockViewer {
         this._block_invalid_position = false;
         this._moved_after_press = false;
         this._selected_block = null;
+        this._clicked_blank_point = null;
+        this._translate = [0, 0];
 
         let canvas = document.getElementById(this._canvas_id);
 
@@ -450,7 +452,10 @@ class CanvasBlockViewer {
         let canvas = document.getElementById(this._canvas_id);
         let ctx = canvas.getContext("2d");
 
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        ctx.translate(this._translate[0], this._translate[1]);
 
         for(let [_, block] of this._blocks) {
             block.drawBlock(ctx, this._selected_block === block);
@@ -496,8 +501,10 @@ class CanvasBlockViewer {
         cbv._moved_after_press = false;
 
         const rect = event.target.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
+        const not_translated_x = event.clientX - rect.left;
+        const not_translated_y = event.clientY - rect.top;
+        const x = not_translated_x - cbv._translate[0];
+        const y = not_translated_y - cbv._translate[1];
 
         for(let connection of cbv._connections) {
 
@@ -538,6 +545,8 @@ class CanvasBlockViewer {
 
             cbv._before_click_block_x = block_clicked.x;
             cbv._before_click_block_y = block_clicked.y;
+
+            cbv._clicked_blank_point = null;
         }
         else {
 
@@ -549,10 +558,13 @@ class CanvasBlockViewer {
                 }
                 cbv.redraw();
             }
+            cbv._clicked_blank_point = [not_translated_x, not_translated_y];
         }
     }
 
     static _canvas_mouseup_event(cbv, event) {
+
+        cbv._clicked_blank_point = null;
 
         if(cbv._connection_clicked !== null) {
 
@@ -611,10 +623,20 @@ class CanvasBlockViewer {
         document.getElementById(cbv._canvas_id).style.cursor = "auto";
 
         const rect = event.target.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
+        const not_translated_x = event.clientX - rect.left;
+        const not_translated_y = event.clientY - rect.top;
+        const x = not_translated_x - cbv._translate[0];
+        const y = not_translated_y - cbv._translate[1];
 
-        if(cbv._block_clicked !== null) {
+        if(cbv._clicked_blank_point !== null) {
+
+            cbv._translate[0] += (not_translated_x - cbv._clicked_blank_point[0]);
+            cbv._translate[1] += (not_translated_y - cbv._clicked_blank_point[1]);
+            cbv._clicked_blank_point = [not_translated_x, not_translated_y];
+
+            cbv.redraw();
+        }
+        else if(cbv._block_clicked !== null) {
 
             this._block_invalid_position = false;
             for(let [block_name, block] of cbv._blocks) {
