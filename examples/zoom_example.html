@@ -1,0 +1,29 @@
+<!DOCTYPE html5>
+<html>
+<head>
+    <meta charset="UTF-8">
+
+    <script src="../src/blocks.js"></script>
+
+</head>
+<body>
+
+    <div>
+        <button onclick="block_viewer.zoomIn(1.2)" style="margin-left: 200px; margin-top: 100px;">+</button>
+        <button onclick="block_viewer.zoomOut(1.2)">-</button>
+    </div>
+    <canvas id="myCanvas" width="800" height="400" style="margin-left: 200px; border:1px solid #000000;"></canvas>
+
+    <script>
+        "use strict";
+
+        var block_viewer = new CanvasBlockViewer('myCanvas');
+
+        block_viewer.addBlock(new Block('name1', 100, 200, 140, 65, 1, 2));
+        block_viewer.addBlock(new Block('name2', 400, 300, 140, 65, 3, 2));
+
+        block_viewer.addConnection('name1', 0, 'name2', 1);
+
+    </script>
+</body>
+</html>

@@ -279,6 +279,7 @@ class CanvasBlockViewer {
         this._selected_block = null;
         this._clicked_blank_point = null;
         this._translate = [0, 0];
+        this._zoom = 1;
 
         let canvas = document.getElementById(this._canvas_id);
 
@@ -300,6 +301,18 @@ class CanvasBlockViewer {
             'output_number': connection.n_out,
             'block': other_block_id
         })
+    }
+
+    zoomIn(value) {
+
+        this._zoom *= value;
+        this.redraw();
+    }
+
+    zoomOut(value) {
+
+        this._zoom /= value;
+        this.redraw();
     }
 
     saveJSON(stringify) {
@@ -367,6 +380,9 @@ class CanvasBlockViewer {
             this._block_invalid_position = false;
             this._moved_after_press = false;
             this._selected_block = null;
+            this._translate = [0, 0];
+            this._clicked_blank_point = null;
+            this._zoom = 1;
         }
 
         const pos_to_block = new Map();
@@ -456,6 +472,7 @@ class CanvasBlockViewer {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         ctx.translate(this._translate[0], this._translate[1]);
+        ctx.scale(this._zoom, this._zoom);
 
         for(let [_, block] of this._blocks) {
             block.drawBlock(ctx, this._selected_block === block);
@@ -503,8 +520,8 @@ class CanvasBlockViewer {
         const rect = event.target.getBoundingClientRect();
         const not_translated_x = event.clientX - rect.left;
         const not_translated_y = event.clientY - rect.top;
-        const x = not_translated_x - cbv._translate[0];
-        const y = not_translated_y - cbv._translate[1];
+        const x = (not_translated_x - cbv._translate[0])/cbv._zoom;
+        const y = (not_translated_y - cbv._translate[1])/cbv._zoom;
 
         for(let connection of cbv._connections) {
 
@@ -625,8 +642,8 @@ class CanvasBlockViewer {
         const rect = event.target.getBoundingClientRect();
         const not_translated_x = event.clientX - rect.left;
         const not_translated_y = event.clientY - rect.top;
-        const x = not_translated_x - cbv._translate[0];
-        const y = not_translated_y - cbv._translate[1];
+        const x = (not_translated_x - cbv._translate[0])/cbv._zoom;
+        const y = (not_translated_y - cbv._translate[1])/cbv._zoom;
 
         if(cbv._clicked_blank_point !== null) {
 
