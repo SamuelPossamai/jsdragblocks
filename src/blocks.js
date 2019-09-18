@@ -523,7 +523,9 @@ class CanvasBlockViewer {
         const x = (not_translated_x - cbv._translate[0])/cbv._zoom;
         const y = (not_translated_y - cbv._translate[1])/cbv._zoom;
 
-        for(let connection of cbv._connections) {
+        for(let i = cbv._connections.length - 1; i >= 0; i--) {
+
+            let connection = cbv._connections[i];
 
             const end_point = connection.block_in.inputPoint(connection.n_in);
 
