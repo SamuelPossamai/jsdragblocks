@@ -581,37 +581,42 @@ class CanvasBlockViewer {
         }
     }
 
+    static _canvas_mouseup_event_connection_clicked(cbv) {
+
+        const connection = cbv._connection_clicked;
+        const current_position = connection.moving_pos;
+
+        let block_found = cbv._find_block_inout_next_to_point(current_position[0], current_position[1], true);
+
+        if(block_found != null) {
+
+            connection.block_in = block_found[0];
+            connection.n_in = block_found[1];
+        }
+        else {
+
+            const out_pos = connection.block_out.outputPoint(connection.n_out);
+            const out_size = connection.block_out.connector_size;
+
+            if(connection.block_in == null || CanvasBlockViewer._test_if_inside(current_position[0], current_position[1], out_pos[0], out_pos[1], 3*out_size)) {
+
+                cbv._connections.splice(cbv._connections.indexOf(connection), 1);
+            }
+        }
+
+        connection.moving_pos = null;
+        cbv._connection_clicked = null;
+
+        cbv.redraw();
+    }
+
     static _canvas_mouseup_event(cbv, event) {
 
         cbv._clicked_blank_point = null;
 
         if(cbv._connection_clicked !== null) {
 
-            const connection = cbv._connection_clicked;
-            const current_position = connection.moving_pos;
-
-            let block_found = cbv._find_block_inout_next_to_point(current_position[0], current_position[1], true);
-
-            if(block_found != null) {
-
-                connection.block_in = block_found[0];
-                connection.n_in = block_found[1];
-            }
-            else {
-
-                const out_pos = connection.block_out.outputPoint(connection.n_out);
-                const out_size = connection.block_out.connector_size;
-
-                if(connection.block_in == null || CanvasBlockViewer._test_if_inside(current_position[0], current_position[1], out_pos[0], out_pos[1], 3*out_size)) {
-
-                    cbv._connections.splice(cbv._connections.indexOf(connection), 1);
-                }
-            }
-
-            connection.moving_pos = null;
-            cbv._connection_clicked = null;
-
-            cbv.redraw();
+            CanvasBlockViewer._canvas_mouseup_event_connection_clicked(cbv);
         }
         else if(cbv._block_clicked !== null && cbv._moved_after_press === false) {
 
