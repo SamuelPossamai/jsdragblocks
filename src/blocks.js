@@ -120,6 +120,66 @@ class BlockConnection {
         this._cbv = cbv;
     }
 
+    _draw_get_end_point(start, b_out_con_size) {
+
+        if(this.moving_pos !== null) {
+
+            let end = this.moving_pos;
+
+            if(CanvasBlockViewer._test_if_inside(end[0], end[1],
+                start[0], start[1], 3*b_out_con_size)) {
+
+                return null;
+            }
+
+            return end;
+        }
+
+        return this.block_in.inputPoint(this.n_in);
+    }
+
+    _draw_returning(ctx, start, end) {
+
+        const middle_y = start[1] + (end[1] - start[1])/2;
+
+        let y_turn = null;
+
+        const diff_center_y = middle_y - this.block_out.y - this.block_out.h/2;
+        if(Math.abs(diff_center_y) > this.block_out.h) {
+            y_turn = middle_y;
+        }
+        else {
+            if(diff_center_y > 0) {
+                y_turn = this.block_out.y + 3*this.block_out.h/2;
+                if(this.moving_pos === null) {
+                    const in_y_turn = this.block_in.y + 3*this.block_in.h/2;
+                    if(in_y_turn > y_turn) {
+                        y_turn = in_y_turn;
+                    }
+                }
+            }
+            else {
+                y_turn = this.block_out.y - this.block_out.h/2
+                if(this.moving_pos === null) {
+                    const in_y_turn = this.block_in.y - this.block_in.h/2;
+                    if(in_y_turn < y_turn) {
+                        y_turn = in_y_turn;
+                    }
+                }
+            }
+        }
+
+        let x_start = start[0] + 20;
+        if(this.moving_pos === null && y_turn != middle_y && this.block_in.x + this.block_in.w > start[0]) {
+            x_start = this.block_in.x + this.block_in.w + 20;
+        }
+
+        ctx.lineTo(x_start, start[1]);
+        ctx.lineTo(x_start, y_turn);
+        ctx.lineTo(end[0] - 20, y_turn);
+        ctx.lineTo(end[0] - 20, end[1]);
+    }
+
     draw(ctx) {
 
         const b_out_con_size = this.block_out.connector_size;
@@ -129,20 +189,9 @@ class BlockConnection {
 
         const start = this.block_out.outputPoint(this.n_out);
 
-        let end = null;
-        if(this.moving_pos === null) {
+        const end = this._draw_get_end_point(start, b_out_con_size);
 
-            end = this.block_in.inputPoint(this.n_in);
-        }
-        else {
-
-            end = this.moving_pos;
-
-            if(CanvasBlockViewer._test_if_inside(end[0], end[1], start[0], start[1], 3*b_out_con_size)) {
-
-                return;
-            }
-        }
+        if(end === null) return;
 
         ctx.strokeStyle = this._get_color();
         ctx.lineWidth = 3;
@@ -158,47 +207,7 @@ class BlockConnection {
             ctx.lineTo(middle_x, start[1]);
             ctx.lineTo(middle_x, end[1]);
         }
-        else {
-
-            const middle_y = start[1] + (end[1] - start[1])/2;
-
-            let y_turn = null;
-
-            const diff_center_y = middle_y - this.block_out.y - this.block_out.h/2;
-            if(Math.abs(diff_center_y) > this.block_out.h) {
-                y_turn = middle_y;
-            }
-            else {
-                if(diff_center_y > 0) {
-                    y_turn = this.block_out.y + 3*this.block_out.h/2;
-                    if(this.moving_pos === null) {
-                        const in_y_turn = this.block_in.y + 3*this.block_in.h/2;
-                        if(in_y_turn > y_turn) {
-                            y_turn = in_y_turn;
-                        }
-                    }
-                }
-                else {
-                    y_turn = this.block_out.y - this.block_out.h/2
-                    if(this.moving_pos === null) {
-                        const in_y_turn = this.block_in.y - this.block_in.h/2;
-                        if(in_y_turn < y_turn) {
-                            y_turn = in_y_turn;
-                        }
-                    }
-                }
-            }
-
-            let x_start = start[0] + 20;
-            if(this.moving_pos === null && y_turn != middle_y && this.block_in.x + this.block_in.w > start[0]) {
-                x_start = this.block_in.x + this.block_in.w + 20;
-            }
-
-            ctx.lineTo(x_start, start[1]);
-            ctx.lineTo(x_start, y_turn);
-            ctx.lineTo(end[0] - 20, y_turn);
-            ctx.lineTo(end[0] - 20, end[1]);
-        }
+        else this._draw_returning(ctx, start, end);
 
         ctx.lineTo(end[0] - arrow_x_offset - 2, end[1]);
         ctx.stroke();
@@ -586,7 +595,11 @@ class CanvasBlockViewer {
         const connection = cbv._connection_clicked;
         const current_position = connection.moving_pos;
 
-        let block_found = cbv._find_block_inout_next_to_point(current_position[0], current_position[1], true);
+        let block_found = null;
+        if(current_position !== null) {
+            cbv._find_block_inout_next_to_point(current_position[0],
+                                                current_position[1], true);
+        }
 
         if(block_found != null) {
 
@@ -598,7 +611,14 @@ class CanvasBlockViewer {
             const out_pos = connection.block_out.outputPoint(connection.n_out);
             const out_size = connection.block_out.connector_size;
 
-            if(connection.block_in == null || CanvasBlockViewer._test_if_inside(current_position[0], current_position[1], out_pos[0], out_pos[1], 3*out_size)) {
+            let test_inside_result = null;
+            if(current_position !== null) {
+                test_inside_result = CanvasBlockViewer._test_if_inside(
+                    current_position[0], current_position[1], out_pos[0],
+                    out_pos[1], 3*out_size)
+            }
+
+            if(connection.block_in == null || current_position === true) {
 
                 cbv._connections.splice(cbv._connections.indexOf(connection), 1);
             }
@@ -639,6 +659,36 @@ class CanvasBlockViewer {
 
         document.getElementById(cbv._canvas_id).style.cursor = "auto";
         cbv._block_clicked = null;
+    }
+
+    _canvas_mousemove_event_not_clicked(x, y) {
+
+        let can_move = false;
+        for(let [_, block] of this._blocks) {
+            if(block.pointIsInsideBlock(x, y) === true) {
+                document.getElementById(this._canvas_id).style.cursor = "move";
+                return;
+            }
+        }
+
+        for(let connection of this._connections) {
+
+            const end_point = connection.block_in.inputPoint(connection.n_in);
+
+            if(CanvasBlockViewer._test_if_inside(x, y, end_point[0], end_point[1], connection.block_in.connector_size)) {
+
+                document.getElementById(this._canvas_id).style.cursor = "move";
+                return;
+            }
+        }
+
+        let block_found = this._find_block_inout_next_to_point(x, y, false);
+
+        if(block_found != null) {
+
+            document.getElementById(this._canvas_id).style.cursor = "move";
+            return;
+        }
     }
 
     static _canvas_mousemove_event(cbv, event) {
@@ -684,34 +734,6 @@ class CanvasBlockViewer {
 
             cbv.redraw();
         }
-        else {
-
-            let can_move = false;
-            for(let [_, block] of cbv._blocks) {
-                if(block.pointIsInsideBlock(x, y) === true) {
-                    document.getElementById(cbv._canvas_id).style.cursor = "move";
-                    return;
-                }
-            }
-
-            for(let connection of cbv._connections) {
-
-                const end_point = connection.block_in.inputPoint(connection.n_in);
-
-                if(CanvasBlockViewer._test_if_inside(x, y, end_point[0], end_point[1], connection.block_in.connector_size)) {
-
-                    document.getElementById(cbv._canvas_id).style.cursor = "move";
-                    return;
-                }
-            }
-
-            let block_found = cbv._find_block_inout_next_to_point(x, y, false);
-
-            if(block_found != null) {
-
-                document.getElementById(cbv._canvas_id).style.cursor = "move";
-                return;
-            }
-        }
+        else cbv._canvas_mousemove_event_not_clicked(x, y);
     }
 }
